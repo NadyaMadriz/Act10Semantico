@@ -1,0 +1,84 @@
+package act4_analisis_gestion_errores;
+import java_cup.runtime.*;
+
+parser code {:
+    // 3.1 Error recuperable
+    public void report_error(String message, Object info) {
+        if (info instanceof Symbol) {
+            Symbol s = (Symbol) info;
+            String tokenStr = (s.value != null) ? s.value.toString() : (s.sym == sym.EOF ? "EOF" : "desconocido");
+            System.out.println("Error sintáctico en linea " + s.left + ", columna " + s.right + ": se encontró '" + tokenStr + "'");
+        } else {
+            System.out.println("Error sintáctico: " + message);
+        }
+    }
+
+    // 3.2 Error fatal 
+    public void report_fatal_error(String message, Object info) throws java.lang.Exception {
+        if (info instanceof Symbol) {
+            Symbol s = (Symbol) info;
+            String tokenStr = (s.value != null) ? s.value.toString() : (s.sym == sym.EOF ? "EOF" : "desconocido");
+            System.out.println("Error fatal en linea " + s.left + ", columna " + s.right + ": se encontró '" + tokenStr + "'");
+        } else {
+            System.out.println("Error fatal: " + message);
+        }
+        throw new Exception("Análisis interrumpido por error fatal.");
+    }
+:};
+
+// Definición de terminales
+terminal PAQUETE, IMPORTAR, CLASE;
+terminal PUNTO_COMA, PUNTO, LLAVE_A, LLAVE_C;
+terminal String IDENTIFICADOR;
+
+// Definición de No terminales
+non terminal archivo, paquete, importaciones, importacion, clase_principal, ubicacion;
+
+// Gramática inicial con soporte de recuperacion de errores
+start with archivo;
+
+archivo ::= 
+    paquete importaciones clase_principal
+    | importaciones clase_principal
+    | error clase_principal {: System.out.println("Recuperacion de error en la cabecera del archivo."); :}
+;
+
+paquete ::= 
+    PAQUETE ubicacion PUNTO_COMA 
+    {: System.out.println("Paquete reconocido correctamente"); :}
+    | PAQUETE error PUNTO_COMA 
+    {: System.out.println("Error recuperable en la ruta del paquete"); :}
+    | PAQUETE ubicacion error 
+    {: System.out.println("Error recuperable: falta punto y coma en el paquete"); :}
+;
+
+importaciones ::= 
+    importaciones importacion
+    | /* epsilon */
+;
+
+importacion ::= 
+    IMPORTAR ubicacion PUNTO_COMA 
+    {: System.out.println("Importacion reconocida correctamente"); :}
+    | IMPORTAR error PUNTO_COMA 
+    {: System.out.println("Error recuperable en la ruta de importacion"); :}
+    | IMPORTAR ubicacion error 
+    {: System.out.println("Error recuperable: falta punto y coma en la importacion"); :}
+;
+
+ubicacion ::= 
+    ubicacion PUNTO IDENTIFICADOR
+    | IDENTIFICADOR
+;
+
+clase_principal ::= 
+    CLASE IDENTIFICADOR LLAVE_A LLAVE_C 
+    {: 
+        System.out.println("Clase principal reconocida correctamente");
+        System.out.println("Estructura de llaves válida");        
+    :}
+    | CLASE error LLAVE_A LLAVE_C 
+    {: System.out.println("Error recuperable: nombre de clase inválido o faltante"); :}
+    | CLASE IDENTIFICADOR error 
+    {: System.out.println("Error recuperable: llaves incorrectas o faltantes en la clase"); :}
+;

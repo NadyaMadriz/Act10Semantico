@@ -1,0 +1,9 @@
+void proceso() {
+  leer(entrada);
+  total = entrada + 10;
+  escribir("Primera parte",total);
+  leer(a b);
+  estado = !activo;
+  escribir(estado);
+  escribir("El analisis continua");
+}

@@ -1,0 +1,73 @@
+/* Cervantes Mora Juan Pablo */
+/* Muñoz Madriz Nadya Janneth */
+/* Ramirez Torres Jesus Adrian */
+
+package act3_analisis_sintatico;
+
+import java_cup.runtime.*;
+
+/* Palabras reservadas */
+terminal INT, FLOAT, CHAR, VOID;
+terminal IF, ELSE, WHILE, FOR, RETURN, BREAK;
+terminal PAQUETE, IMPORTAR, CLASE;
+
+/* Operadores aritmeticos */
+terminal IGUAL, SUMA, RESTA, MULTIPLICACION, DIVISION;
+
+/* Operadores relacionales */
+terminal MAYOR_QUE, MENOR_QUE, IGUAL_QUE;
+terminal DIFERENTE_QUE, MENOR_IGUAL, MAYOR_IGUAL;
+
+/* Operadores logicos */
+terminal AND_LOGICO, OR_LOGICO, NOT_LOGICO;
+
+/* Simbolos */
+terminal PARENTESIS_A, PARENTESIS_C;
+terminal LLAVE_A, LLAVE_C;
+terminal CORCHETE_A, CORCHETE_C;
+terminal PUNTO_COMA, COMA, PUNTO;
+
+/* Tipos de datos dinamicos */
+terminal IDENTIFICADOR, NUMERO, DECIMAL, CADENA;
+
+/* NO TERMINALES */
+non terminal archivo;
+non terminal paquete;
+non terminal importacion_lista, importacion;
+non terminal ubicacion;
+non terminal clase_principal;
+
+/* REGLAS GRAMATICALES */
+start with archivo;
+
+archivo ::= paquete importacion_lista clase_principal
+          | paquete clase_principal
+          | importacion_lista clase_principal
+          |clase_principal
+          ;
+
+paquete ::= PAQUETE ubicacion PUNTO_COMA
+            {:
+                System.out.println("Regla reconocida: paquete");
+            :}
+          ;
+
+importacion_lista ::= importacion_lista importacion
+                    | importacion
+                    ;
+
+importacion ::= IMPORTAR ubicacion PUNTO_COMA
+                {:
+                    System.out.println("Regla reconocida: importacion");
+                :}
+            ;
+
+ubicacion ::= IDENTIFICADOR
+            | ubicacion PUNTO IDENTIFICADOR
+            ;
+
+clase_principal ::= CLASE IDENTIFICADOR LLAVE_A LLAVE_C
+                    {:
+                        System.out.println("Regla reconocida: clase_principal");
+                    :}
+                ;

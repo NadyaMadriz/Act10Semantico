@@ -1,0 +1,13 @@
+void proceso() {
+  leer(a);
+  leer(b,c);
+  escribir("Inicio del proceso");
+  total = a + b;
+  promedio = (a+b+c)/3;
+  activo = a && b;
+  estado = !activo;
+  resultado = (a && b) || c;
+  escribir("Resultado:",total);
+  escribir(promedio);
+  escribir(a+b);
+}

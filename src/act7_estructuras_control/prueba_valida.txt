@@ -1,0 +1,51 @@
+void proceso() {
+    edad = 20;
+    contador = 0;
+    i = 0;
+    j = 0;
+    activo = verdadero;
+    opcion = 1;
+
+    si (edad >= 18) {
+        escribir("Mayor de edad");
+    } sino {
+        escribir("Menor de edad");
+    }
+
+    mientras (contador < 5) {
+        si (contador % 2 == 0) {
+            escribir("Par");
+        } sino {
+            escribir("Impar");
+        }
+        contador = contador + 1;
+    }
+
+    hacer {
+        escribir(contador);
+        contador = contador - 1;
+    } mientras (contador > 0);
+
+    para (i = 0; i < 5; i = i + 1) {
+        escribir(i);
+    }
+
+    segun (opcion) {
+        caso 1:
+            escribir("Opcion uno");
+            romper;
+        defecto:
+            escribir("Defecto");
+    }
+
+    para (i = 0; i < 10; i = i + 1) {
+        si (i % 2 == 0) {
+            mientras (contador < 5) {
+                escribir(i);
+                contador = contador + 1;
+            }
+        } sino {
+            escribir("Numero impar");
+        }
+    }
+}

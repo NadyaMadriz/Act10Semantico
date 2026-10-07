@@ -1,0 +1,113 @@
+package act5_analisis_sintactico;
+
+import java_cup.runtime.*;
+
+parser code {:
+    public void report_error(String message, Object info) {
+        String tokenStr = "desconocido";
+        int linea = 0;
+        int columna = 0;
+
+        if (info instanceof Symbol) {
+            Symbol s = (Symbol) info;
+            linea = s.left;
+            columna = s.right;
+            tokenStr = (s.value != null) ? s.value.toString() : "EOF";
+        }
+
+        System.out.println("Error sintactico en linea " + linea + ", columna " + columna + ":");
+        System.out.println("se encontro '" + tokenStr + "'");
+        System.out.println("Descripcion: " + message);
+    }
+
+    public void report_fatal_error(String message, Object info) throws Exception {
+        report_error(message, info);
+        throw new Exception("Error fatal en el analisis sintactico.");
+    }
+:};
+
+terminal PAQUETE, IMPORTAR, CLASE, FINAL;
+terminal INT, FLOAT, DOUBLE, CHAR, BOOLEAN, STRING;
+terminal VERDADERO, FALSO;
+terminal PUNTO_COMA, PUNTO, LLAVE_A, LLAVE_C, COMA, IGUAL;
+terminal String IDENTIFICADOR, NUMERO, DECIMAL, CADENA, CARACTER;
+terminal ERROR_LEXICO;
+
+non terminal archivo, paquete, importaciones, importacion, ubicacion;
+non terminal clase_principal, cuerpo_clase, miembro, atributo, constante;
+non terminal tipo, lista_identificadores, identificador, valor, opt_inicializacion;
+
+start with archivo;
+
+archivo ::= paquete importaciones clase_principal
+          | paquete clase_principal
+          | importaciones clase_principal
+          | clase_principal
+          ;
+
+paquete ::= PAQUETE ubicacion PUNTO_COMA ;
+
+importaciones ::= importacion
+                | importacion importaciones
+                ;
+
+importacion ::= IMPORTAR ubicacion PUNTO_COMA ;
+
+ubicacion ::= IDENTIFICADOR
+            | ubicacion PUNTO IDENTIFICADOR
+            ;
+
+clase_principal ::= CLASE IDENTIFICADOR LLAVE_A LLAVE_C
+                                        {: System.out.println("Clase vacia reconocida."); :}
+                                    | CLASE IDENTIFICADOR LLAVE_A cuerpo_clase LLAVE_C
+                                        {: System.out.println("Clase con miembros reconocida."); :}
+                                    ;
+
+cuerpo_clase ::= miembro cuerpo_clase
+                                 {: System.out.println("Miembro de clase reconocido."); :}
+                             | miembro
+                                 {: System.out.println("Miembro de clase reconocido."); :}
+               ;
+
+miembro ::= atributo
+          | constante
+                    | error PUNTO_COMA
+                        {: System.out.println("Declaracion invalida recuperada; se continua con el siguiente miembro."); :}
+          ;
+
+atributo ::= tipo lista_identificadores opt_inicializacion PUNTO_COMA
+                         {: System.out.println("Atributo o variable reconocido."); :}
+                     ;
+constante ::= FINAL tipo identificador IGUAL valor PUNTO_COMA
+                            {: System.out.println("Constante reconocida."); :}
+                        | FINAL tipo identificador PUNTO_COMA
+                            {: System.out.println("Error: la constante debe inicializarse."); :}
+                        ;
+
+opt_inicializacion ::= IGUAL valor
+                    | /* empty */
+                    ;
+
+tipo ::= INT
+       | FLOAT
+       | DOUBLE
+       | CHAR
+       | BOOLEAN
+       | STRING
+       | identificador
+       ;
+
+lista_identificadores ::= identificador
+                        | lista_identificadores COMA identificador
+                        ;
+
+identificador ::= IDENTIFICADOR ;
+
+valor ::= NUMERO
+        | DECIMAL
+        | CADENA
+        | CARACTER
+        | VERDADERO
+        | FALSO
+        ;
+

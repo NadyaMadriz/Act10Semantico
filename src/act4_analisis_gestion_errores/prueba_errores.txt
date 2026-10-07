@@ -1,0 +1,4 @@
+package com.ejemplo.error       
+import com.util              
+class {                      
+}

@@ -1,0 +1,12 @@
+package com.ejemplo.valido;
+import com.util.Herramientas;
+class Persona {
+	int edad;
+	String nombre, apellido;
+	float salario = 5000;
+	double peso = 75.5;
+	char inicial = 'J';
+	boolean activo = true;
+	final double PI = 3.1416;
+	final int MAX = 100;
+}

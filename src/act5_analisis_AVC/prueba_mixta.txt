@@ -1,0 +1,7 @@
+class Registro {
+    int correcto;
+    int faltaComa otro;
+    final int SIN_VALOR;
+    String posterior = "continua";
+    final boolean ACTIVO = true;
+}

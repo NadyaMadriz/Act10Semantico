@@ -1,0 +1,40 @@
+/* Cervantes Mora Juan Pablo */
+/* Muñoz Madriz Nadya Janneth */
+/* Ramirez Torres Jesus Adrian */
+
+package act1_analisis_lexico;
+
+import java_cup.runtime.*;
+
+/* TERMINALES DE C */
+
+/* Palabras reservadas */
+terminal INT, FLOAT, CHAR, VOID;
+terminal IF, ELSE, WHILE, FOR, RETURN, BREAK;
+
+/* Operadores aritmeticos */
+terminal IGUAL, SUMA, RESTA, MULTIPLICACION, DIVISION;
+
+/* Operadores relacionales */
+terminal MAYOR_QUE, MENOR_QUE, IGUAL_QUE;
+terminal DIFERENTE_QUE, MENOR_IGUAL, MAYOR_IGUAL;
+
+/* Operadores logicos */
+terminal AND_LOGICO, OR_LOGICO, NOT_LOGICO;
+
+/* Simbolos */
+terminal PARENTESIS_A, PARENTESIS_C;
+terminal LLAVE_A, LLAVE_C;
+terminal CORCHETE_A, CORCHETE_C;
+terminal PUNTO_COMA, COMA, PUNTO;
+
+/* Tipos de datos dinamicos */
+terminal IDENTIFICADOR, NUMERO, DECIMAL, CADENA;
+
+/* NO TERMINALES */
+non terminal inicio;
+
+/* REGLAS GRAMATICALES */
+start with inicio;
+
+inicio ::= ;

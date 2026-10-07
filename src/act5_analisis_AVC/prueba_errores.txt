@@ -1,0 +1,8 @@
+package com.ejemplo.error;
+import com.util.Herramientas;
+class Persona {
+	int edad nombre;
+	final int MAX;
+	float;
+	String ciudad;
+}

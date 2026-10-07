@@ -1,0 +1,74 @@
+/* Prueba de comentarios de bloque */
+
+int main() {
+
+    // Prueba de palabras reservadas
+    int edad = 18;
+    float promedio = 9.5;
+    char letra;
+
+    // Prueba de identificadores
+    int numero1 = 100;
+    int _numero2 = 25;
+
+    // Prueba de operadores aritmeticos
+    numero1 = numero1 + 10;
+    numero1 = numero1 - 5;
+    numero1 = numero1 * 2;
+    numero1 = numero1 / 3;
+
+    // Prueba de operadores relacionales
+    if (edad > 18) {
+        edad = edad + 1;
+    }
+
+    if (edad < 30) {
+        edad = edad + 1;
+    }
+
+    if (edad == 20) {
+        edad = 21;
+    }
+
+    if (edad != 25) {
+        edad = 22;
+    }
+
+    if (edad <= 30) {
+        edad = 23;
+    }
+
+    if (edad >= 18) {
+        edad = 24;
+    }
+
+    // Prueba de operadores logicos
+    if (edad >= 18 && edad <= 60) {
+        edad = edad + 1;
+    }
+
+    if (edad < 18 || edad > 60) {
+        edad = 0;
+    }
+
+    if (!edad) {
+        edad = 18;
+    }
+
+    // Prueba de cadenas
+    "Hola mundo";
+    "Texto con \"comillas\"";
+
+    // Prueba de simbolos
+    int arreglo[10];
+    arreglo[0] = 5;
+
+    promedio = promedio + 0.5;
+
+    return 0;
+}
+
+/* Prueba de error lexico */
+@
+#
+$
