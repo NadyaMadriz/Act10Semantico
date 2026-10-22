@@ -1,0 +1,24 @@
+clase Evaluador {
+
+    int base = 10;
+    float factor = 2.5;
+    const float PI = 3.1416;
+    boolean esActivo = verdadero;
+
+    void ejecutar() {
+        int resultado;
+        float calculoComplejo;
+        boolean condicion;
+
+        // Expresión aritmética válida con variables y constantes
+        resultado = base * 5;
+        calculoComplejo = (base + factor) * PI;
+
+        // Expresión relacional y lógica válida
+        condicion = (resultado > 20) && esActivo;
+
+        si (condicion) {
+            escribir("Cálculo correcto");
+        }
+    }
+}

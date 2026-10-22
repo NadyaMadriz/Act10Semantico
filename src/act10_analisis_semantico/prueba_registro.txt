@@ -1,0 +1,12 @@
+class mi_sistema {
+    int AtributoIncorrecto;
+    final float VALOR_CONSTANTE;
+    int cantidad = "diez";
+
+    void proceso() {
+        int x;
+        int x = 10;
+        int y = 5 + true;
+        float z = 2.5;
+    }
+}

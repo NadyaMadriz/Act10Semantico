@@ -1,0 +1,382 @@
+package act10_analisis_semantico;
+
+import java_cup.runtime.*;
+
+parser code {:
+  // Tabla de Simbolos y ambito actual (se conservan de la Act 9)
+  public TablaSimbolos tabla = new TablaSimbolos();
+  public String ambitoActual = "GLOBAL";
+
+  public void report_error(String message, Object info) {
+      String tokenStr = "desconocido";
+      int linea = 0;
+      int columna = 0;
+
+      if (info instanceof Symbol) {
+          Symbol simbolo = (Symbol) info;
+          linea = simbolo.left;
+          columna = simbolo.right;
+          tokenStr = (simbolo.value != null) ? simbolo.value.toString() : "EOF";
+      }
+
+      System.out.println("Error sintactico en linea " + linea + ", columna " + columna + ":");
+      System.out.println("se encontro '" + tokenStr + "'");
+      System.out.println("Descripcion: " + message);
+  }
+
+  public void report_fatal_error(String message, Object info) throws Exception {
+      report_error(message, info);
+      throw new Exception("Error fatal en el analisis sintactico.");
+  }
+:};
+
+terminal PAQUETE, IMPORTAR, CLASE, FINAL, VOID, LEER, ESCRIBIR;
+terminal SI, SINO, SEGUN, CASO, DEFECTO, ROMPER, MIENTRAS, HACER, PARA;
+terminal INT, FLOAT, DOUBLE, CHAR, BOOLEAN, STRING;
+terminal VERDADERO, FALSO;
+terminal PUNTO_COMA, DOS_PUNTOS, PUNTO, LLAVE_A, LLAVE_C, PAREN_A, PAREN_C, COMA, IGUAL;
+terminal MAYOR, MENOR, MAYOR_IGUAL, MENOR_IGUAL, IGUAL_IGUAL, DIFERENTE;
+terminal MAS, MENOS, POR, DIV, MOD, Y, O, NO;
+terminal String IDENTIFICADOR, NUMERO, DECIMAL, CADENA, CARACTER;
+terminal ERROR_LEXICO;
+
+non terminal archivo, paquete, importaciones, importacion, ubicacion;
+non terminal clase_principal, cuerpo_clase, miembro, atributo, constante;
+non terminal metodo, cuerpo_metodo, sentencia, lectura, escritura, asignacion, declaracion_local;
+non terminal lista_identificadores, lista_elementos, elemento;
+non terminal String tipo, identificador;
+non terminal Object valor;
+non terminal String expresion, condicion;
+non terminal bloque;
+non terminal seleccion_simple, seleccion_doble, seleccion_multiple, lista_casos, caso_item, defecto_item;
+non terminal ciclo_mientras, ciclo_hacer_mientras, ciclo_para, actualizacion;
+non terminal encabezado_si, encabezado_mientras, encabezado_para;
+
+/* Precedencia: de menor a mayor. Los relacionales quedan por debajo de la aritmetica. */
+precedence left O;
+precedence left Y;
+precedence left IGUAL_IGUAL, DIFERENTE;
+precedence left MAYOR, MENOR, MAYOR_IGUAL, MENOR_IGUAL;
+precedence left MAS, MENOS;
+precedence left POR, DIV, MOD;
+precedence right NO;
+
+start with archivo;
+
+archivo ::= paquete importaciones clase_principal
+          | paquete clase_principal
+          | importaciones clase_principal
+          | clase_principal
+          | metodo
+          ;
+
+paquete ::= PAQUETE ubicacion PUNTO_COMA ;
+
+importaciones ::= importacion
+                | importacion importaciones
+                ;
+
+importacion ::= IMPORTAR ubicacion PUNTO_COMA ;
+
+ubicacion ::= IDENTIFICADOR
+            | ubicacion PUNTO IDENTIFICADOR
+            ;
+
+clase_principal ::= CLASE IDENTIFICADOR:id LLAVE_A LLAVE_C
+    {:
+        if (!ValidadorSemantico.esPascalCase(id)) {
+            ReportarError.advertencia(id, "El nombre de la clase '" + id + "' debería usar PascalCase.", idleft, idright);
+        }
+        tabla.insertar(new Simbolo(id, "CLASE", "void", "N/A", "GLOBAL", idleft, idright, "ID"));
+        ambitoActual = "GLOBAL";
+        System.out.println("Clase vacia reconocida.");
+    :}
+  | CLASE IDENTIFICADOR:id LLAVE_A cuerpo_clase LLAVE_C
+    {:
+        if (!ValidadorSemantico.esPascalCase(id)) {
+            ReportarError.advertencia(id, "El nombre de la clase '" + id + "' debería usar PascalCase.", idleft, idright);
+        }
+        tabla.insertar(new Simbolo(id, "CLASE", "void", "N/A", "GLOBAL", idleft, idright, "ID"));
+        ambitoActual = "GLOBAL";
+        System.out.println("Clase con miembros reconocida.");
+    :}
+  ;
+
+cuerpo_clase ::= miembro cuerpo_clase
+               | miembro
+               ;
+
+miembro ::= atributo
+          | constante
+          | metodo
+          | error PUNTO_COMA
+            {: System.out.println("Declaracion invalida recuperada; se continua con el siguiente miembro."); :}
+          ;
+
+/* Atributo con valor inicial: se verifica que el tipo del valor sea compatible con el tipo declarado */
+atributo ::= tipo:t IDENTIFICADOR:id IGUAL valor:val PUNTO_COMA
+    {:
+        if (!ValidadorSemantico.esCamelCase(id)) {
+            ReportarError.advertencia(id, "El atributo '" + id + "' debería utilizar la convención camelCase.", idleft, idright);
+        }
+        // Solo se registra si no tiene errores
+        Simbolo nuevo = new Simbolo(id, "ATRIBUTO", t, val, ambitoActual, idleft, idright, "ID");
+        if (!tabla.duplicado(nuevo) && ManejadorTipos.validarInicializacion("ATRIBUTO", id, t, ManejadorTipos.tipoDeLiteral(val), idleft, idright)) {
+            tabla.insertar(nuevo);
+        }
+        System.out.println("Atributo con valor reconocido.");
+    :}
+  | tipo:t IDENTIFICADOR:id PUNTO_COMA
+    {:
+        if (!ValidadorSemantico.esCamelCase(id)) {
+            ReportarError.advertencia(id, "El atributo '" + id + "' debería utilizar la convención camelCase.", idleft, idright);
+        }
+        tabla.insertar(new Simbolo(id, "ATRIBUTO", t, "null", ambitoActual, idleft, idright, "ID"));
+        System.out.println("Atributo sin valor reconocido.");
+    :}
+  ;
+
+/* Constante: se guarda como CONSTANTE y despues no se puede reasignar */
+constante ::= FINAL tipo:t IDENTIFICADOR:id IGUAL valor:val PUNTO_COMA
+    {:
+        // Solo se registra si no tiene errores
+        Simbolo nuevo = new Simbolo(id, "CONSTANTE", t, val, ambitoActual, idleft, idright, "ID");
+        if (!tabla.duplicado(nuevo) && ManejadorTipos.validarInicializacion("CONSTANTE", id, t, ManejadorTipos.tipoDeLiteral(val), idleft, idright)) {
+            tabla.insertar(nuevo);
+        }
+        System.out.println("Constante reconocida.");
+    :}
+  | FINAL tipo:t IDENTIFICADOR:id PUNTO_COMA
+    {:
+        ReportarError.semantico(id, "La constante '" + id + "' requiere una asignación obligatoria de valor inicial.", idleft, idright);
+    :}
+  ;
+
+metodo ::= VOID IDENTIFICADOR:id PAREN_A PAREN_C
+    {:
+        if (!ValidadorSemantico.esCamelCase(id)) {
+            ReportarError.advertencia(id, "El método '" + id + "' debería utilizar la convención camelCase.", idleft, idright);
+        }
+        tabla.insertar(new Simbolo(id, "METODO", "void", "N/A", ambitoActual, idleft, idright, "ID"));
+        ambitoActual = id;
+    :}
+    bloque
+    {:
+        ambitoActual = "GLOBAL";
+        System.out.println("Metodo reconocido.");
+    :}
+  ;
+
+bloque ::= LLAVE_A cuerpo_metodo LLAVE_C
+           {: System.out.println("Regla reconocida: bloque"); :}
+         | error LLAVE_C
+           {: System.out.println("Error en bloque recuperado."); :}
+         ;
+
+cuerpo_metodo ::= sentencia cuerpo_metodo
+                | /* empty */
+                ;
+
+sentencia ::= lectura
+            | escritura
+            | asignacion
+            | declaracion_local
+            | seleccion_simple
+            | seleccion_doble
+            | seleccion_multiple
+            | ciclo_mientras
+            | ciclo_hacer_mientras
+            | ciclo_para
+            | error PUNTO_COMA
+              {: System.out.println("Sentencia invalida recuperada; se continua con la siguiente sentencia."); :}
+            ;
+
+/* NUEVO Act 10: variables y constantes locales dentro de un metodo */
+declaracion_local ::= tipo:t IDENTIFICADOR:id IGUAL expresion:e PUNTO_COMA
+    {:
+        // Solo se registra si no tiene errores
+        Simbolo nuevo = new Simbolo(id, "VARIABLE", t, "expresion", ambitoActual, idleft, idright, "ID");
+        if (!tabla.duplicado(nuevo) && ManejadorTipos.validarInicializacion("VARIABLE", id, t, e, idleft, idright)) {
+            tabla.insertar(nuevo);
+        }
+        System.out.println("Regla reconocida: declaracion_local");
+    :}
+  | tipo:t IDENTIFICADOR:id PUNTO_COMA
+    {:
+        tabla.insertar(new Simbolo(id, "VARIABLE", t, "null", ambitoActual, idleft, idright, "ID"));
+        System.out.println("Regla reconocida: declaracion_local");
+    :}
+  | FINAL tipo:t IDENTIFICADOR:id IGUAL expresion:e PUNTO_COMA
+    {:
+        // Solo se registra si no tiene errores
+        Simbolo nuevo = new Simbolo(id, "CONSTANTE", t, "expresion", ambitoActual, idleft, idright, "ID");
+        if (!tabla.duplicado(nuevo) && ManejadorTipos.validarInicializacion("CONSTANTE", id, t, e, idleft, idright)) {
+            tabla.insertar(nuevo);
+        }
+        System.out.println("Regla reconocida: declaracion_local (constante)");
+    :}
+  ;
+
+/* Las condiciones deben ser boolean: se revisa en el encabezado de cada estructura */
+encabezado_si ::= SI:s PAREN_A condicion:c PAREN_C
+    {: ManejadorTipos.validarCondicion("si", c, sleft, sright); :}
+  ;
+
+encabezado_mientras ::= MIENTRAS:m PAREN_A condicion:c PAREN_C
+    {: ManejadorTipos.validarCondicion("mientras", c, mleft, mright); :}
+  ;
+
+encabezado_para ::= PARA:p PAREN_A asignacion condicion:c PUNTO_COMA actualizacion PAREN_C
+    {: ManejadorTipos.validarCondicion("para", c, pleft, pright); :}
+  ;
+
+seleccion_simple ::= encabezado_si bloque
+    {: System.out.println("Regla reconocida: seleccion_simple"); :}
+  | SI error bloque
+    {: System.out.println("Error sintactico: se esperaba '(' y condicion despues de 'si'."); :}
+  ;
+
+seleccion_doble ::= encabezado_si bloque SINO bloque
+    {: System.out.println("Regla reconocida: seleccion_doble"); :}
+  ;
+
+seleccion_multiple ::= SEGUN PAREN_A expresion PAREN_C LLAVE_A lista_casos defecto_item LLAVE_C
+    {: System.out.println("Regla reconocida: seleccion_multiple"); :}
+  | SEGUN PAREN_A expresion PAREN_C LLAVE_A lista_casos LLAVE_C
+    {: System.out.println("Regla reconocida: seleccion_multiple"); :}
+  ;
+
+lista_casos ::= lista_casos caso_item
+              | caso_item
+              ;
+
+caso_item ::= CASO valor DOS_PUNTOS cuerpo_metodo ROMPER PUNTO_COMA
+    {: System.out.println("Regla reconocida: caso"); :}
+  | CASO error DOS_PUNTOS cuerpo_metodo ROMPER PUNTO_COMA
+    {: System.out.println("Error sintactico: se esperaba un valor despues de 'caso'."); :}
+  ;
+
+defecto_item ::= DEFECTO DOS_PUNTOS cuerpo_metodo
+    {: System.out.println("Regla reconocida: defecto"); :}
+  ;
+
+ciclo_mientras ::= encabezado_mientras bloque
+    {: System.out.println("Regla reconocida: ciclo_mientras"); :}
+  | MIENTRAS error bloque
+    {: System.out.println("Error sintactico: se esperaba ')' en la condicion del ciclo mientras."); :}
+  ;
+
+ciclo_hacer_mientras ::= HACER bloque MIENTRAS:m PAREN_A condicion:c PAREN_C PUNTO_COMA
+    {:
+        ManejadorTipos.validarCondicion("mientras", c, mleft, mright);
+        System.out.println("Regla reconocida: ciclo_hacer_mientras");
+    :}
+  ;
+
+ciclo_para ::= encabezado_para bloque
+    {: System.out.println("Regla reconocida: ciclo_para"); :}
+  | PARA PAREN_A asignacion error PUNTO_COMA actualizacion PAREN_C bloque
+    {: System.out.println("Error sintactico: se esperaba condicion en el ciclo 'para'."); :}
+  | PARA PAREN_A asignacion condicion PUNTO_COMA error PAREN_C bloque
+    {: System.out.println("Error sintactico: se esperaba la seccion de actualizacion del ciclo 'para'."); :}
+  ;
+
+actualizacion ::= identificador:id IGUAL expresion:e
+    {: ManejadorTipos.validarAsignacion(tabla, ambitoActual, id, e, idleft, idright); :}
+  ;
+
+condicion ::= expresion:e
+    {:
+        RESULT = e;
+        System.out.println("Regla reconocida: condicion");
+    :}
+  ;
+
+/* leer: cada identificador debe existir y no ser constante */
+lectura ::= LEER PAREN_A lista_identificadores PAREN_C PUNTO_COMA
+    {: System.out.println("Regla reconocida: lectura"); :}
+  ;
+
+escritura ::= ESCRIBIR PAREN_A lista_elementos PAREN_C PUNTO_COMA
+    {: System.out.println("Regla reconocida: escritura"); :}
+  ;
+
+/* Asignacion: se verifica que exista, que no sea constante y que el tipo sea compatible */
+asignacion ::= identificador:id IGUAL expresion:e PUNTO_COMA
+    {:
+        ManejadorTipos.validarAsignacion(tabla, ambitoActual, id, e, idleft, idright);
+        System.out.println("Regla reconocida: asignacion");
+    :}
+  | identificador IGUAL error PUNTO_COMA
+    {: System.out.println("Error: expresion invalida o incompleta en la asignacion."); :}
+  ;
+
+lista_identificadores ::= identificador:id
+    {: ManejadorTipos.validarLectura(tabla, ambitoActual, id, idleft, idright); :}
+  | lista_identificadores COMA identificador:id
+    {: ManejadorTipos.validarLectura(tabla, ambitoActual, id, idleft, idright); :}
+  ;
+
+lista_elementos ::= elemento
+                  | lista_elementos COMA elemento
+                  ;
+
+elemento ::= expresion ;
+
+/* Cada expresion devuelve su tipo (String). Los errores devuelven "error" y se propagan en silencio. */
+expresion ::= expresion:e1 O:op expresion:e2
+    {: RESULT = ManejadorTipos.logica("||", e1, e2, opleft, opright); :}
+  | expresion:e1 Y:op expresion:e2
+    {: RESULT = ManejadorTipos.logica("&&", e1, e2, opleft, opright); :}
+  | expresion:e1 IGUAL_IGUAL:op expresion:e2
+    {: RESULT = ManejadorTipos.igualdad("==", e1, e2, opleft, opright); :}
+  | expresion:e1 DIFERENTE:op expresion:e2
+    {: RESULT = ManejadorTipos.igualdad("!=", e1, e2, opleft, opright); :}
+  | expresion:e1 MAYOR:op expresion:e2
+    {: RESULT = ManejadorTipos.relacional(">", e1, e2, opleft, opright); :}
+  | expresion:e1 MENOR:op expresion:e2
+    {: RESULT = ManejadorTipos.relacional("<", e1, e2, opleft, opright); :}
+  | expresion:e1 MAYOR_IGUAL:op expresion:e2
+    {: RESULT = ManejadorTipos.relacional(">=", e1, e2, opleft, opright); :}
+  | expresion:e1 MENOR_IGUAL:op expresion:e2
+    {: RESULT = ManejadorTipos.relacional("<=", e1, e2, opleft, opright); :}
+  | expresion:e1 MAS:op expresion:e2
+    {: RESULT = ManejadorTipos.aritmetica("+", e1, e2, opleft, opright); :}
+  | expresion:e1 MENOS:op expresion:e2
+    {: RESULT = ManejadorTipos.aritmetica("-", e1, e2, opleft, opright); :}
+  | expresion:e1 POR:op expresion:e2
+    {: RESULT = ManejadorTipos.aritmetica("*", e1, e2, opleft, opright); :}
+  | expresion:e1 DIV:op expresion:e2
+    {: RESULT = ManejadorTipos.aritmetica("/", e1, e2, opleft, opright); :}
+  | expresion:e1 MOD:op expresion:e2
+    {: RESULT = ManejadorTipos.aritmetica("%", e1, e2, opleft, opright); :}
+  | NO:op expresion:e1
+    {: RESULT = ManejadorTipos.negacion(e1, opleft, opright); :}
+    | MENOS:op expresion:e1
+    {: RESULT = ManejadorTipos.menosUnario(e1, opleft, opright); :}
+  | PAREN_A expresion:e1 PAREN_C
+    {: RESULT = e1; :}
+  | identificador:id
+    {: RESULT = ManejadorTipos.tipoDeIdentificador(tabla, ambitoActual, id, idleft, idright); :}
+  | valor:v
+    {: RESULT = ManejadorTipos.tipoDeLiteral(v); :}
+  ;
+
+tipo ::= INT {: RESULT = "int"; :}
+       | FLOAT {: RESULT = "float"; :}
+       | DOUBLE {: RESULT = "double"; :}
+       | CHAR {: RESULT = "char"; :}
+       | BOOLEAN {: RESULT = "boolean"; :}
+       | STRING {: RESULT = "string"; :}
+       | IDENTIFICADOR:id {: RESULT = id; :}
+       ;
+
+identificador ::= IDENTIFICADOR:id {: RESULT = id; :} ;
+
+valor ::= NUMERO:v {: RESULT = v; :}
+        | DECIMAL:v {: RESULT = v; :}
+        | CADENA:v {: RESULT = v; :}
+        | CARACTER:v {: RESULT = v; :}
+        | VERDADERO {: RESULT = "verdadero"; :}
+        | FALSO {: RESULT = "falso"; :}
+        ;

@@ -1,0 +1,34 @@
+class PruebaMixta {
+
+    int edad = 20;
+    double sueldo = 1500;
+    String nombre = "Ana";
+    final int MAXIMO = 50;
+
+    void proceso() {
+        int a;
+        float promedio;
+        boolean activo;
+
+        leer(a);
+        promedio = a / 2.0;
+        activo = (a > 10) || (edad == 20);
+        escribir("Hola " + nombre, promedio);
+
+        // Errores: float a int, ! sobre int, string menos int
+        a = promedio;
+        activo = !edad;
+        nombre = nombre - 1;
+
+        // Una sentencia correcta despues de los errores
+        sueldo = edad * 2;
+
+        // Errores: leer sobre constante y comparacion de boolean con int
+        leer(MAXIMO);
+        activo = activo > 3;
+
+        mientras (a < 5) {
+            a = a + 1;
+        }
+    }
+}
